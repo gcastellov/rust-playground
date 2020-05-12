@@ -11,11 +11,6 @@ fn test_encode_no() {
 }
 
 #[test]
-fn test_encode_no1() {
-    assert_eq!(cipher::encode("n"), "m");
-}
-
-#[test]
 fn test_encode_omg() {
     assert_eq!(cipher::encode("OMG"), "lnt");
 }

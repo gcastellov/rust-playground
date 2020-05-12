@@ -1,27 +1,29 @@
 const ALPHABET: &str = "abcdefghijklmnopqrstuvwxyz";
+const SPACE: &str = " ";
 const CHUNK_SIZE: usize = 5;
 
-trait AtbashConverter {
-    fn convert(&self, from: &str, to: &str) -> String;
+type Iter<'a> = Box<dyn Iterator<Item = char> + 'a>;
+
+trait AtbashConverter<'a> {
+    fn convert(&self, from: &'a str, to: &'a str) -> Iter<'a>;
     fn reverse(&self) -> String;
 }
 
-impl AtbashConverter for &str {
-    fn convert(&self, from: &str, to: &str) -> String { 
-        self
-        .to_ascii_lowercase()
-        .chars()
-        .filter(|c|!c.is_whitespace())
-        .filter_map(|c|{
-            if c.is_numeric() { 
-                return Some(c) 
-            }
-            if let Some(i) = from.find(c) {
-                return to.chars().nth(i)
-            }
-            None
-        })
-        .collect::<String>()
+impl<'a> AtbashConverter<'a> for &'a str {    
+    fn convert(&self, from: &'a str, to: &'a str) -> Iter<'a> { 
+        Box::new(
+            self
+            .chars()
+            .filter(|c|!c.is_whitespace())
+            .filter_map(move |c|{
+                if c.is_numeric() { 
+                    return Some(c) 
+                }
+                if let Some(i) = from.find(c.to_ascii_lowercase()) {
+                    return to.chars().nth(i)
+                }
+                None
+            }))
     }
 
     fn reverse(&self) -> String {
@@ -34,28 +36,22 @@ impl AtbashConverter for &str {
 
 pub fn encode(plain: &str) -> String {
     let reversed_alphabet: String = ALPHABET.reverse();
-    let encoded: String = plain.convert(ALPHABET, &reversed_alphabet);
-    split_by_chunks(encoded)
+    plain
+        .convert(ALPHABET, &reversed_alphabet)
+        .enumerate()
+        .fold(String::from(""),|mut a,(index, _b)| {
+            let rem: usize = index.rem_euclid(CHUNK_SIZE);
+            if rem == 0 && index > 1 {
+                a.push_str(SPACE);
+            }
+            a.push(_b);
+            a
+        })
 }
 
 pub fn decode(cipher: &str) -> String {
     let reversed_alphabet: String = ALPHABET.reverse();
-    return cipher.convert(&reversed_alphabet, ALPHABET);
-}
-
-fn split_by_chunks(encoded: String) -> String {
-    (0..encoded.len())
-        .filter_map(|index|{
-            let rem: usize = index.rem_euclid(CHUNK_SIZE);                        
-             if rem == 0 && index > 1 { 
-                Some(&encoded[index-CHUNK_SIZE..index])
-            }
-            else if index == encoded.len() - 1 {
-                Some(&encoded[index-rem..=index])
-            }
-            else {
-                None
-            }
-        })
-        .fold(String::from(""),|a,b| if a.is_empty() { a + &b } else { a + " " + &b })
+    cipher
+        .convert(&reversed_alphabet, ALPHABET)
+        .collect()
 }
