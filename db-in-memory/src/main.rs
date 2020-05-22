@@ -9,6 +9,17 @@ const UPDATE_OPTION: &'static str = "U";
 const LIST_OPTION: &'static str = "L";
 const EXIT_OPTION: &'static str = "E";
 
+trait OrElse {
+    fn or_else(&self, _else: String) -> String;
+}
+
+impl OrElse for String {    
+    fn or_else(&self, _else: String) -> String { 
+        let copy = &*self;
+        if copy.is_empty() { _else } else { copy.to_string() }
+    }
+}
+
 fn main() {
 
     let db = &mut storage::Database::new();
@@ -99,11 +110,15 @@ fn update_person<'a>(db: &'a mut storage::Database) {
     let entry = find_by_id(db);
     let person: &Person = &*entry.1;
     let personal_info = get_personal_info();
-    let mut copy = Person::new(&personal_info.0, &personal_info.1, personal_info.2);
+    let mut copy = Person::new(
+        &personal_info.0.or_else(person.name.to_owned()), 
+        &personal_info.1.or_else(person.last_name.to_owned()), 
+        personal_info.2);
+
     if let Some(address) = &person.address {
         copy.set_address(&address.city, &address.street, address.number, &address.zip_code);
     }
-
+    
     db.people.insert(entry.0, copy);
 }
 
