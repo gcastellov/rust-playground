@@ -41,6 +41,10 @@ pub mod people {
             let address = Address::new(city, street, number, zip_code);
             self.address = Some(Box::new(address));
         }
+
+        pub fn get_full_name(&self) -> String {
+            format!("{} {}", self.name, self.last_name)
+        }
     }
 
 }
@@ -64,6 +68,14 @@ pub mod storage {
             let current = self.sequence;
             self.sequence += 1;
             self.people.insert(current, person);
+        }
+
+        pub fn get_by_id(&self, id: u64) -> Option<(&u64, &Person)> {
+            self.people.get_key_value(&id)
+        }
+
+        pub fn get_by_name(&self, name: String) -> Option<(&u64, &Person)> {
+            self.people.iter().find(|(_, p)|p.get_full_name().to_lowercase() == name.to_lowercase())
         }
     }
 }

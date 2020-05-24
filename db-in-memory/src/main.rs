@@ -97,13 +97,22 @@ fn update<'a>(db: &'a mut storage::Database) {
 
     loop {
         println!("Find people to update by:");
-        println!("I -> ID");
+        println!("I -> By ID");
+        println!("N -> By Name");
         let choice = read_line();
 
         let _choice = &*choice;
         match _choice {
             "I" => { 
-                update_person(db);
+                let entry = find_by_id(db);
+                let person = update_person(entry.1);
+                db.people.insert(entry.0, person);
+                break;
+            },
+            "N" => {
+                let entry = find_by_name(db);
+                let person = update_person(entry.1);
+                db.people.insert(*entry.0, person);
                 break;
             },
             _ => continue
@@ -112,14 +121,13 @@ fn update<'a>(db: &'a mut storage::Database) {
 }
 
 fn find_by_id<'a>(db: &'a storage::Database) -> (u64, &'a Person) {
-
     loop {
         println!("Type the entry ID:");
         let _id = read_line();
-        let id = &_id.parse::<u64>().unwrap();
+        let id = _id.parse::<u64>().unwrap();
 
-        if db.people.contains_key(id) {
-            return (*id, &db.people[id]);
+        if let Some(entry) = db.get_by_id(id) {
+            return (*entry.0, entry.1);
         }
         else {
             println!("Sorry, person not found! Try again!");
@@ -127,9 +135,21 @@ fn find_by_id<'a>(db: &'a storage::Database) -> (u64, &'a Person) {
     }
 }
 
-fn update_person<'a>(db: &'a mut storage::Database) {
-    let entry = find_by_id(db);
-    let person: &Person = &*entry.1;
+fn find_by_name<'a>(db: &'a storage::Database) -> (&u64, &'a Person) {
+    loop {
+        println!("Type the full name:");
+        let name = read_line().trim().to_owned();
+
+        if let Some(p) = db.get_by_name(name) {
+            return p;
+        }
+        else {
+            println!("Sorry, person not found! Try again!");
+        }
+    }
+}
+
+fn update_person<'a>(person: &Person) -> Person {
     let personal_info = get_personal_info();
     let age = if personal_info.2.is_err() { person.age } else { personal_info.2.unwrap() };
 
@@ -142,10 +162,11 @@ fn update_person<'a>(db: &'a mut storage::Database) {
         copy.set_address(&address.city, &address.street, address.number, &address.zip_code);
     }
     
-    db.people.insert(entry.0, copy);
+    copy
 }
 
 fn get_personal_info() -> (String, String, Result<u16, ParseIntError>) {
+    println!("");
     println!("Name:");
     let name = read_line();
     
